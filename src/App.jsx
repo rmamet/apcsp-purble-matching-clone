@@ -108,9 +108,11 @@ function App() {
       <select
         value={difficulty}
         onChange={(p) => difficulyChange(p.target.value)}
-        className="text-white"
+        className="text-white bg-slate-800"
       >
-        <option disabled={true} value=""></option>
+        <option disabled={true} value="">
+          Select a Difficulty
+        </option>
         <option value="Easy">Easy</option>
         <option value="Medium">Medium</option>
         <option value="Hard">Hard</option>

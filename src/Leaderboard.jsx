@@ -37,21 +37,46 @@ function Leaderboard({ difficulty, reload, setReload }) {
   }, [difficulty, reload, setReload]);
 
   return (
-    <div className="text-white m-4 border-2 border-white border-solid rounded-2xl p-4">
-      <h2 className="text-3xl">Leaderboard!</h2>
-      {difficulty}
+    <div className="m-4 p-4 bg-linear-to-br from-slate-800 to-slate-700 rounded-2xl shadow-lg">
+      <h2 className="text-2xl font-semibold text-amber-300 mb-2">
+        Leaderboard 🏆{" "}
+        <span className="text-sm text-slate-300">
+          {difficulty || "Select difficulty"}
+        </span>
+      </h2>
       {loading ? (
-        <p>Loading...</p>
+        <p className="text-slate-300">Loading...</p>
       ) : (
-        <ol className="list-decimal pl-5">
+        <ol className="space-y-2">
           {data && data.data && data.data.length > 0 ? (
-            data.data.map((item) => (
-              <li key={item.id} className="user-score">
-                Score: {item.score} - {item.uname}
+            data.data.map((item, idx) => (
+              <li
+                key={item.id}
+                className="flex items-center justify-between bg-slate-900 bg-opacity-20 p-3 rounded-md"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">
+                    {idx === 0 ? (
+                      "🥇"
+                    ) : idx === 1 ? (
+                      "🥈"
+                    ) : idx === 2 ? (
+                      "🥉"
+                    ) : (
+                      <span className="text-sm text-slate-400">#{idx + 1}</span>
+                    )}
+                  </span>
+                  <div>
+                    <div className="font-medium">{item.uname}</div>
+                    <div className="text-sm text-slate-400">
+                      Score: {item.score}
+                    </div>
+                  </div>
+                </div>
               </li>
             ))
           ) : (
-            <p>No data available.</p>
+            <p className="text-slate-300">No scores yet... be the first!</p>
           )}
         </ol>
       )}

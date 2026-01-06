@@ -139,7 +139,19 @@ function App() {
         Score: <b>{score}</b>
       </p>
       {localStorage.getItem("auth_token") ? (
-        <p className="text-white">Logged in: {localStorage.getItem("uname")}</p>
+        <>
+          <p className="text-white">
+            Logged in: {localStorage.getItem("uname")}
+          </p>
+          <button
+            className="text-white p-1 rounded-md border-2 border-solid border-amber-50"
+            onClick={() => {
+              window.location.href = "/login";
+            }}
+          >
+            Manage Account
+          </button>
+        </>
       ) : (
         <button
           className="text-white p-1 rounded-md border-2 border-solid border-amber-50"

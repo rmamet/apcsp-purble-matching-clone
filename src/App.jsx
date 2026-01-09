@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import Leaderboard from "./Leaderboard";
 
 function App() {
-  const [shuffled, setShuffled] = useState([]);
+  const [boardTiles, setBoardTiles] = useState([]);
   const characters = [
     "A",
     "B",
@@ -32,20 +32,21 @@ function App() {
     "Z",
   ];
   const [difficulty, setDifficulty] = useState("");
-  const [selected, setSelected] = useState([]);
-  const [matched, setMatched] = useState([]);
+  const [selectedTileIndices, setSelectedTileIndices] = useState([]);
+  const [matchedTileFlags, setMatchedTileFlags] = useState([]);
   const [score, setScore] = useState(0);
-  const [reload, setReload] = useState(false);
+  const [refreshLeaderboard, setRefreshLeaderboard] = useState(false);
 
-  const prev = useRef(shuffled);
+  const previousBoardRef = useRef(boardTiles);
 
   useEffect(() => {
-    const becameEmpty = prev.current.length > 0 && shuffled.length === 0;
-    prev.current = shuffled;
+    const didBoardBecomeCleared =
+      previousBoardRef.current.length > 0 && boardTiles.length === 0;
+    previousBoardRef.current = boardTiles;
 
-    const run = async () => {
-      if (becameEmpty && localStorage.getItem("auth_token")) {
-        setReload(true);
+    const submitScoreIfBoardCleared = async () => {
+      if (didBoardBecomeCleared && localStorage.getItem("auth_token")) {
+        setRefreshLeaderboard(true);
         await fetch("https://api.rmamet.xyz/memoryscores", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -59,41 +60,41 @@ function App() {
       }
     };
 
-    run();
-  }, [shuffled, score, difficulty]);
+    submitScoreIfBoardCleared();
+  }, [boardTiles, score, difficulty]);
 
-  const checkSelected = async () => {
-    let values = [];
-    for (let i = 0; i < selected.length; i++) {
-      values.push(shuffled[selected[i]]);
+  const evaluateSelectedMatch = async () => {
+    let selectedValues = [];
+    for (let i = 0; i < selectedTileIndices.length; i++) {
+      selectedValues.push(boardTiles[selectedTileIndices[i]]);
     }
-    if (values[0] == values[1]) {
-      setMatched((prev) => {
-        const copy = [...prev];
-        for (let i = 0; i < selected.length; i++) {
-          copy[selected[i]] = true;
+    if (selectedValues[0] == selectedValues[1]) {
+      setMatchedTileFlags((prevFlags) => {
+        const updatedFlags = [...prevFlags];
+        for (let i = 0; i < selectedTileIndices.length; i++) {
+          updatedFlags[selectedTileIndices[i]] = true;
         }
-        if (copy.length > 0 && copy.every(Boolean)) {
-          setTimeout(() => setShuffled([]), 400);
+        if (updatedFlags.length > 0 && updatedFlags.every(Boolean)) {
+          setTimeout(() => setBoardTiles([]), 400);
         }
-        return copy;
+        return updatedFlags;
       });
     } else {
       setScore(score + 1);
     }
 
-    setSelected([]);
+    setSelectedTileIndices([]);
   };
-  if (selected.length === 2) {
+  if (selectedTileIndices.length === 2) {
     setTimeout(() => {
-      checkSelected();
+      evaluateSelectedMatch();
     }, 500);
   }
-  const checkHidden = (i) => {
-    if (matched[i]) return "matched";
-    for (let j = 0; j < selected.length; j++) {
-      if (i === selected[j]) {
-        return shuffled[i];
+  const getTileDisplayValue = (i) => {
+    if (matchedTileFlags[i]) return "matched";
+    for (let j = 0; j < selectedTileIndices.length; j++) {
+      if (i === selectedTileIndices[j]) {
+        return boardTiles[i];
       }
     }
     return "hidden";
@@ -101,7 +102,7 @@ function App() {
 
   // shuffle function from https://stackoverflow.com/questions/2450954/how-to-randomize-shuffle-a-javascript-array
 
-  function shuffle(array) {
+  function shuffleArray(array) {
     let currentIndex = array.length;
 
     while (currentIndex != 0) {
@@ -115,7 +116,7 @@ function App() {
     return array;
   }
 
-  const difficulyChange = (diff) => {
+  const handleDifficultyChange = (diff) => {
     setDifficulty(diff);
     setScore(0);
     let listChars = [];
@@ -131,10 +132,10 @@ function App() {
 
     const doubled = [...listChars, ...listChars];
 
-    const shuffledArray = shuffle(doubled);
-    setShuffled(shuffledArray);
-    setMatched(Array(shuffledArray.length).fill(false));
-    setSelected([]);
+    const shuffledArray = shuffleArray(doubled);
+    setBoardTiles(shuffledArray);
+    setMatchedTileFlags(Array(shuffledArray.length).fill(false));
+    setSelectedTileIndices([]);
   };
 
   return (
@@ -190,7 +191,7 @@ function App() {
           <label className="text-sm text-slate-300">Difficulty</label>
           <select
             value={difficulty}
-            onChange={(p) => difficulyChange(p.target.value)}
+            onChange={(p) => handleDifficultyChange(p.target.value)}
             className="text-white bg-slate-700 rounded-md p-2 border border-slate-600"
           >
             <option disabled={true} value="">
@@ -201,30 +202,32 @@ function App() {
             <option value="Hard">Hard</option>
             <option value="Secret">Secret</option>
           </select>
-          {/* <p className="text-white">{shuffled}</p> */}
+          {/* <p className="text-white">{boardTiles}</p> */}
         </div>
         {difficulty === "Easy" && (
           <div className="grid grid-rows-2 grid-cols-3 gap-3 p-4 bg-slate-800 rounded-md shadow">
             {(() => {
               const items = [];
-              for (let i = 0; i < shuffled.length; i++) {
+              for (let i = 0; i < boardTiles.length; i++) {
                 items.push(
                   <div
                     id={i}
                     key={i}
                     onClick={(e) => {
                       const id = Number(e.currentTarget.id);
-                      if (matched[id]) return;
-                      if (selected.length >= 2) return;
-                      if (selected[0] === id) return;
-                      setSelected((s) => [...s, id]);
+                      if (matchedTileFlags[id]) return;
+                      if (selectedTileIndices.length >= 2) return;
+                      if (selectedTileIndices[0] === id) return;
+                      setSelectedTileIndices((s) => [...s, id]);
                     }}
-                    className={`rounded-md cursor-pointer select-none transition-transform duration-150 ${checkHidden(i) === "hidden" ? "bg-slate-700 hover:scale-105" : checkHidden(i) === "matched" ? "bg-emerald-600 text-white shadow-inner scale-100" : "bg-amber-400 scale-100"}`}
+                    className={`rounded-md cursor-pointer select-none transition-transform duration-150 ${getTileDisplayValue(i) === "hidden" ? "bg-slate-700 hover:scale-105" : getTileDisplayValue(i) === "matched" ? "bg-emerald-600 text-white shadow-inner scale-100" : "bg-amber-400 scale-100"}`}
                   >
                     <div
-                      className={`aspect-square flex items-center justify-center text-2xl font-bold ${checkHidden(i) === "hidden" || checkHidden(i) === "matched" ? "text-white" : "text-slate-900"}`}
+                      className={`aspect-square flex items-center justify-center text-2xl font-bold ${getTileDisplayValue(i) === "hidden" || getTileDisplayValue(i) === "matched" ? "text-white" : "text-slate-900"}`}
                     >
-                      {checkHidden(i) === "hidden" ? "?" : shuffled[i]}
+                      {getTileDisplayValue(i) === "hidden"
+                        ? "?"
+                        : boardTiles[i]}
                     </div>
                   </div>
                 );
@@ -237,24 +240,26 @@ function App() {
           <div className="grid grid-rows-2 grid-cols-5 gap-3 p-4 bg-slate-800 rounded-md shadow">
             {(() => {
               const items = [];
-              for (let i = 0; i < shuffled.length; i++) {
+              for (let i = 0; i < boardTiles.length; i++) {
                 items.push(
                   <div
                     id={i}
                     key={i}
                     onClick={(e) => {
                       const id = Number(e.currentTarget.id);
-                      if (matched[id]) return;
-                      if (selected.length >= 2) return;
-                      if (selected[0] === id) return;
-                      setSelected((s) => [...s, id]);
+                      if (matchedTileFlags[id]) return;
+                      if (selectedTileIndices.length >= 2) return;
+                      if (selectedTileIndices[0] === id) return;
+                      setSelectedTileIndices((s) => [...s, id]);
                     }}
-                    className={`rounded-md cursor-pointer select-none transition-transform duration-150 ${checkHidden(i) === "hidden" ? "bg-slate-700 hover:scale-105" : checkHidden(i) === "matched" ? "bg-emerald-600 text-white shadow-inner scale-100" : "bg-amber-400 scale-100"}`}
+                    className={`rounded-md cursor-pointer select-none transition-transform duration-150 ${getTileDisplayValue(i) === "hidden" ? "bg-slate-700 hover:scale-105" : getTileDisplayValue(i) === "matched" ? "bg-emerald-600 text-white shadow-inner scale-100" : "bg-amber-400 scale-100"}`}
                   >
                     <div
-                      className={`aspect-square flex items-center justify-center text-2xl font-bold ${checkHidden(i) === "hidden" || checkHidden(i) === "matched" ? "text-white" : "text-slate-900"}`}
+                      className={`aspect-square flex items-center justify-center text-2xl font-bold ${getTileDisplayValue(i) === "hidden" || getTileDisplayValue(i) === "matched" ? "text-white" : "text-slate-900"}`}
                     >
-                      {checkHidden(i) === "hidden" ? "?" : shuffled[i]}
+                      {getTileDisplayValue(i) === "hidden"
+                        ? "?"
+                        : boardTiles[i]}
                     </div>
                   </div>
                 );
@@ -267,24 +272,26 @@ function App() {
           <div className="grid grid-rows-4 grid-cols-4 gap-3 p-4 bg-slate-800 rounded-md shadow">
             {(() => {
               const items = [];
-              for (let i = 0; i < shuffled.length; i++) {
+              for (let i = 0; i < boardTiles.length; i++) {
                 items.push(
                   <div
                     id={i}
                     key={i}
                     onClick={(e) => {
                       const id = Number(e.currentTarget.id);
-                      if (matched[id]) return;
-                      if (selected.length >= 2) return;
-                      if (selected[0] === id) return;
-                      setSelected((s) => [...s, id]);
+                      if (matchedTileFlags[id]) return;
+                      if (selectedTileIndices.length >= 2) return;
+                      if (selectedTileIndices[0] === id) return;
+                      setSelectedTileIndices((s) => [...s, id]);
                     }}
-                    className={`rounded-md cursor-pointer select-none transition-transform duration-150 ${checkHidden(i) === "hidden" ? "bg-slate-700 hover:scale-105" : checkHidden(i) === "matched" ? "bg-emerald-600 text-white shadow-inner scale-100" : "bg-amber-400 scale-100"}`}
+                    className={`rounded-md cursor-pointer select-none transition-transform duration-150 ${getTileDisplayValue(i) === "hidden" ? "bg-slate-700 hover:scale-105" : getTileDisplayValue(i) === "matched" ? "bg-emerald-600 text-white shadow-inner scale-100" : "bg-amber-400 scale-100"}`}
                   >
                     <div
-                      className={`aspect-square flex items-center justify-center text-2xl font-bold ${checkHidden(i) === "hidden" || checkHidden(i) === "matched" ? "text-white" : "text-slate-900"}`}
+                      className={`aspect-square flex items-center justify-center text-2xl font-bold ${getTileDisplayValue(i) === "hidden" || getTileDisplayValue(i) === "matched" ? "text-white" : "text-slate-900"}`}
                     >
-                      {checkHidden(i) === "hidden" ? "?" : shuffled[i]}
+                      {getTileDisplayValue(i) === "hidden"
+                        ? "?"
+                        : boardTiles[i]}
                     </div>
                   </div>
                 );
@@ -297,24 +304,26 @@ function App() {
           <div className="grid grid-rows-4 grid-cols-13 gap-2 p-4 bg-slate-800 rounded-md shadow">
             {(() => {
               const items = [];
-              for (let i = 0; i < shuffled.length; i++) {
+              for (let i = 0; i < boardTiles.length; i++) {
                 items.push(
                   <div
                     id={i}
                     key={i}
                     onClick={(e) => {
                       const id = Number(e.currentTarget.id);
-                      if (matched[id]) return;
-                      if (selected.length >= 2) return;
-                      if (selected[0] === id) return;
-                      setSelected((s) => [...s, id]);
+                      if (matchedTileFlags[id]) return;
+                      if (selectedTileIndices.length >= 2) return;
+                      if (selectedTileIndices[0] === id) return;
+                      setSelectedTileIndices((s) => [...s, id]);
                     }}
-                    className={`rounded-md cursor-pointer select-none transition-transform duration-150 ${checkHidden(i) === "hidden" ? "bg-slate-700 hover:scale-105" : checkHidden(i) === "matched" ? "bg-emerald-600 text-white shadow-inner scale-100" : "bg-amber-400 scale-100"}`}
+                    className={`rounded-md cursor-pointer select-none transition-transform duration-150 ${getTileDisplayValue(i) === "hidden" ? "bg-slate-700 hover:scale-105" : getTileDisplayValue(i) === "matched" ? "bg-emerald-600 text-white shadow-inner scale-100" : "bg-amber-400 scale-100"}`}
                   >
                     <div
-                      className={`aspect-square flex items-center justify-center text-2xl font-bold ${checkHidden(i) === "hidden" || checkHidden(i) === "matched" ? "text-white" : "text-slate-900"}`}
+                      className={`aspect-square flex items-center justify-center text-2xl font-bold ${getTileDisplayValue(i) === "hidden" || getTileDisplayValue(i) === "matched" ? "text-white" : "text-slate-900"}`}
                     >
-                      {checkHidden(i) === "hidden" ? "?" : shuffled[i]}
+                      {getTileDisplayValue(i) === "hidden"
+                        ? "?"
+                        : boardTiles[i]}
                     </div>
                   </div>
                 );
@@ -326,8 +335,8 @@ function App() {
         <div className="mt-6">
           <Leaderboard
             difficulty={difficulty}
-            reload={reload}
-            setReload={setReload}
+            refreshLeaderboard={refreshLeaderboard}
+            setRefreshLeaderboard={setRefreshLeaderboard}
           />
         </div>
       </div>

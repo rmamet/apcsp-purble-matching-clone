@@ -1,53 +1,53 @@
 import { useState } from "react";
 
 export default function LoginPage() {
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [uname, setUname] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
-  async function handleLogin() {
-    setLoading(true);
-    setMessage("");
+  async function handleSignIn() {
+    setIsLoading(true);
+    setStatusMessage("");
 
     try {
       const res = await fetch("https://api.rmamet.xyz/loginapi", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uname: uname, password: password }),
+        body: JSON.stringify({ uname: username, password: password }),
       });
 
       const data = await res.json();
 
       if (data?.data) {
         localStorage.setItem("auth_token", data.data);
-        localStorage.setItem("uname", uname);
+        localStorage.setItem("uname", username);
       }
       if (res.status == 200) {
-        setMessage("Logged In!");
+        setStatusMessage("Logged In!");
         setTimeout(function () {
           window.location.href = "/";
         }, 2000);
       } else if (res.status == 201) {
-        setMessage("Account Created");
+        setStatusMessage("Account Created");
         setPassword("");
         setTimeout(function () {
           window.location.href = "/";
         }, 2000);
       } else {
-        setMessage(data?.message);
+        setStatusMessage(data?.message);
       }
     } catch (e) {
-      setMessage(toString(e));
+      setStatusMessage(String(e));
       console.error(e);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }
 
-  async function deleteAccount() {
-    setLoading(true);
-    setMessage("");
+  async function handleDeleteAccount() {
+    setIsLoading(true);
+    setStatusMessage("");
 
     try {
       const res = await fetch("https://api.rmamet.xyz/loginapi", {
@@ -62,7 +62,7 @@ export default function LoginPage() {
 
       const data = await res.json();
       if (res.status == 200) {
-        setMessage("Account deleted!");
+        setStatusMessage("Account deleted!");
         setPassword("");
         localStorage.removeItem("auth_token");
         localStorage.removeItem("uname");
@@ -70,17 +70,17 @@ export default function LoginPage() {
           window.location.href = "/";
         }, 2000);
       } else {
-        setMessage(data?.message);
+        setStatusMessage(data?.message);
       }
     } catch (e) {
-      setMessage(e?.message ?? String(e));
+      setStatusMessage(e?.message ?? String(e));
       console.error(e);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }
 
-  function logOut() {
+  function handleLogout() {
     localStorage.removeItem("auth_token");
     localStorage.removeItem("uname");
     window.location.reload();
@@ -99,7 +99,7 @@ export default function LoginPage() {
           </p>
           <div className="flex gap-3 items-center mb-4">
             <button
-              onClick={logOut}
+              onClick={handleLogout}
               className="px-4 py-2 bg-slate-700 rounded-md text-white hover:bg-slate-600"
             >
               Log Out
@@ -122,21 +122,23 @@ export default function LoginPage() {
             className="w-full p-2 rounded-md mb-3 bg-slate-900 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
           <button
-            onClick={deleteAccount}
-            disabled={loading}
+            onClick={handleDeleteAccount}
+            disabled={isLoading}
             className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-md"
           >
-            {loading ? "Deleting..." : "Delete Account"}
+            {isLoading ? "Deleting..." : "Delete Account"}
           </button>
-          {message && <p className="mt-3 text-slate-200">{message}</p>}
+          {statusMessage && (
+            <p className="mt-3 text-slate-200">{statusMessage}</p>
+          )}
         </>
       ) : (
         <>
           <h1 className="text-3xl font-bold text-amber-300 mb-4">Login</h1>
           <label className="text-slate-200 block mb-1">Username</label>
           <input
-            onChange={(p) => setUname(p.target.value)}
-            value={uname}
+            onChange={(p) => setUsername(p.target.value)}
+            value={username}
             className="w-full p-2 rounded-md mb-3 bg-slate-900 text-white border border-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
           <label className="text-slate-200 block mb-1">Password</label>
@@ -148,24 +150,26 @@ export default function LoginPage() {
           />
           <div className="flex gap-3">
             <button
-              onClick={handleLogin}
-              disabled={loading}
+              onClick={handleSignIn}
+              disabled={isLoading}
               className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-md font-semibold"
             >
-              {loading ? "Logging in..." : "Login"}
+              {isLoading ? "Logging in..." : "Login"}
             </button>
             <button
               onClick={() => {
-                setUname("");
+                setUsername("");
                 setPassword("");
-                setMessage("");
+                setStatusMessage("");
               }}
               className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-md"
             >
               Reset
             </button>
           </div>
-          {message && <p className="mt-3 text-slate-200">{message}</p>}
+          {statusMessage && (
+            <p className="mt-3 text-slate-200">{statusMessage}</p>
+          )}
         </>
       )}
     </div>

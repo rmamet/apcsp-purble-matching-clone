@@ -1,17 +1,20 @@
 import { useState, useEffect } from "react";
 
-function Leaderboard({ difficulty, reload, setReload }) {
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState();
+function Leaderboard({
+  difficulty,
+  refreshLeaderboard,
+  setRefreshLeaderboard,
+}) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [scoresResponse, setScoresResponse] = useState();
 
   useEffect(() => {
-    async function getScores() {
-      setLoading(true);
+    async function fetchLeaderboardScores() {
+      setIsLoading(true);
 
       try {
         const res = await fetch(
           `https://api.rmamet.xyz/memoryscores?difficulty=${encodeURIComponent(difficulty)}`,
-          // `https://api.rmamet.xyz/memoryscores?difficulty=${encodeURIComponent('Non-Existant')}`,
           {
             method: "GET",
             headers: { "Content-Type": "application/json" },
@@ -20,21 +23,19 @@ function Leaderboard({ difficulty, reload, setReload }) {
 
         const json = await res.json();
 
-        setData(json);
-
-        // setMessage(JSON.stringify(data?.data));
+        setScoresResponse(json);
       } catch (e) {
         console.error(e);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     }
 
-    getScores();
-    if (reload) {
-      setReload(false);
+    fetchLeaderboardScores();
+    if (refreshLeaderboard) {
+      setRefreshLeaderboard(false);
     }
-  }, [difficulty, reload, setReload]);
+  }, [difficulty, refreshLeaderboard, setRefreshLeaderboard]);
 
   return (
     <div className="m-4 p-4 bg-linear-to-br from-slate-800 to-slate-700 rounded-2xl shadow-lg">
@@ -44,32 +45,36 @@ function Leaderboard({ difficulty, reload, setReload }) {
           {difficulty || "Select difficulty"}
         </span>
       </h2>
-      {loading ? (
+      {isLoading ? (
         <p className="text-slate-300">Loading...</p>
       ) : (
         <ol className="space-y-2">
-          {data && data.data && data.data.length > 0 ? (
-            data.data.map((item, idx) => (
+          {scoresResponse &&
+          scoresResponse.data &&
+          scoresResponse.data.length > 0 ? (
+            scoresResponse.data.map((entry, index) => (
               <li
-                key={item.id}
+                key={entry.id}
                 className="flex items-center justify-between bg-slate-900 bg-opacity-20 p-3 rounded-md"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-lg">
-                    {idx === 0 ? (
+                    {index === 0 ? (
                       "🥇"
-                    ) : idx === 1 ? (
+                    ) : index === 1 ? (
                       "🥈"
-                    ) : idx === 2 ? (
+                    ) : index === 2 ? (
                       "🥉"
                     ) : (
-                      <span className="text-sm text-slate-400">#{idx + 1}</span>
+                      <span className="text-sm text-slate-400">
+                        #{index + 1}
+                      </span>
                     )}
                   </span>
                   <div>
-                    <div className="font-medium">{item.uname}</div>
+                    <div className="font-medium">{entry.uname}</div>
                     <div className="text-sm text-slate-400">
-                      Score: {item.score}
+                      Score: {entry.score}
                     </div>
                   </div>
                 </div>
